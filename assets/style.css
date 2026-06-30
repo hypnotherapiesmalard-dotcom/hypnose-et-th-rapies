@@ -369,6 +369,26 @@ img { max-width: 100%; display: block; }
 .footer-col p { margin: 0 0 8px; font-size: 15px; }
 .footer-col a { color: var(--cream); }
 .footer-col img { border-radius: 50%; margin-bottom: 12px; }
+.social-icons { display: flex; gap: 22px; margin-top: 4px; }
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(247,241,232,0.08);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.social-icon:hover { background: rgba(247,241,232,0.16); transform: translateY(-2px); }
+.badge-ahtma-footer { border-radius: 8px; margin-bottom: 0; }
+.badge-ahtma {
+  border-radius: 50%;
+}
+.badge-center {
+  text-align: center;
+  padding-bottom: 56px;
+}
 .footer-legal {
   border-top: 1px solid rgba(247,241,232,0.15);
   padding: 20px 24px;
@@ -628,3 +648,4 @@ img { max-width: 100%; display: block; }
   .maps-grid { grid-template-columns: 1fr; }
   .ebook-card { flex-direction: column; }
 }
+  
