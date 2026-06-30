@@ -388,6 +388,7 @@ img { max-width: 100%; display: block; }
 .badge-center {
   display: flex;
   justify-content: center;
+  width: 100%;
   padding-bottom: 56px;
 }
 .footer-legal {
@@ -649,4 +650,3 @@ img { max-width: 100%; display: block; }
   .maps-grid { grid-template-columns: 1fr; }
   .ebook-card { flex-direction: column; }
 }
-  
