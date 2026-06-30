@@ -386,7 +386,8 @@ img { max-width: 100%; display: block; }
   border-radius: 50%;
 }
 .badge-center {
-  text-align: center;
+  display: flex;
+  justify-content: center;
   padding-bottom: 56px;
 }
 .footer-legal {
