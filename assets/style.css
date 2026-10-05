@@ -640,7 +640,7 @@ img { max-width: 100%; display: block; }
   .path-grid, .path-grid--three, .location-grid { grid-template-columns: 1fr; }
   .footer-inner { grid-template-columns: 1fr; }
   .parcours-hero-grid { grid-template-columns: 1fr; }
-  .parcours-photo { max-width: 220px; }
+    .parcours-photo { max-width: 220px; margin: 0 auto; }
   .practical-grid { grid-template-columns: 1fr; }
   .explain-grid { grid-template-columns: 1fr; }
   .explain-visual { width: 120px; margin: 0 auto; }
