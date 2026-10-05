@@ -1261,7 +1261,9 @@ readBreath();
 (function() {
   let last = 0;
   function send() {
-    const h = document.documentElement.scrollHeight;
+    /* hauteur réelle du contenu (et non de la fenêtre), pour pouvoir aussi rétrécir */
+    const m = document.querySelector("main");
+    const h = Math.ceil(m.getBoundingClientRect().bottom + window.scrollY + 16);
     if (Math.abs(h - last) > 2) {
       last = h;
       try {
@@ -1270,7 +1272,8 @@ readBreath();
       }
     }
   }
-  new ResizeObserver(send).observe(document.body);
+  new ResizeObserver(send).observe(document.querySelector("main"));
+  document.addEventListener("click", () => setTimeout(send, 60));
   window.addEventListener("load", send);
   setInterval(send, 800);
 })();
