@@ -215,6 +215,8 @@ nav{position:static!important;background:transparent!important}
         <label class="chip"><input type="radio" name="cyc" value="5" checked><span>5 cycles</span></label>
         <label class="chip"><input type="radio" name="cyc" value="8"><span>8 cycles</span></label>
         <label class="chip"><input type="radio" name="cyc" value="10"><span>10 cycles</span></label>
+        <label class="chip"><input type="radio" name="cyc" value="20"><span>20 cycles</span></label>
+        <label class="chip"><input type="radio" name="cyc" value="0"><span>Sans limite, pour la nuit</span></label>
       </div>
     </fieldset>
     <fieldset id="durSet">
@@ -786,11 +788,11 @@ function readBreath() {
   $("#tip41").hidden = br.mode !== "41";
   if (br.mode === "41") {
     br.cycles = +document.querySelector("input[name=cyc]:checked").value;
-    br.total = br.cycles * br.cyc;
+    br.total = br.cycles ? br.cycles * br.cyc : Infinity;
   } else br.total = +document.querySelector("input[name=dur]:checked").value * 60;
   if (!br.running) {
     phaseEl.textContent = "Prêt";
-    countEl.textContent = br.mode === "41" ? `${br.cycles} cycles, environ ${Math.round(br.total / 60)} minutes` : `${br.total / 60} minutes`;
+    countEl.textContent = br.mode === "41" ? (br.cycles ? `${br.cycles} cycles, environ ${Math.round(br.total / 60)} minutes` : "Sans limite : arrêtez quand vous le souhaitez") : `${br.total / 60} minutes`;
   }
 }
 $$("input[name=rhythm],input[name=dur],input[name=cyc],input[name=vpace]").forEach((r) => r.addEventListener("change", () => {
@@ -818,7 +820,7 @@ function breathTick(now) {
     if ($("#cue").checked) tone(f, 1.1, 0.06);
   }
   const left = Math.ceil(d - t);
-  countEl.textContent = br.mode === "41" ? `${detail} · cycle ${n + 1} sur ${br.cycles}` : `${left} s, encore ${mmss(br.total - el)}`;
+  countEl.textContent = br.mode === "41" ? (br.cycles ? `${detail} · cycle ${n + 1} sur ${br.cycles}` : `${detail} · cycle ${n + 1}`) : `${left} s, encore ${mmss(br.total - el)}`;
   br.raf = requestAnimationFrame(breathTick);
 }
 async function breathStart() {
