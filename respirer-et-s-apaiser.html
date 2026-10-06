@@ -75,6 +75,23 @@
       <iframe id="toolbox"    src="assets/outils/outils.html?v=3" title="Exercices de respiration et sons apaisants"
         allow="autoplay; screen-wake-lock" loading="lazy"></iframe>
       <p class="toolbox-note">Pour les sons binauraux et le va-et-vient, utilisez un casque ou des écouteurs. N'utilisez pas ces outils en conduisant. Sons binauraux déconseillés en cas d'épilepsie. Ces outils accompagnent un suivi, ils ne le remplacent pas.</p>
+           <p style="text-align:center;margin-top:1.5rem">
+        <button type="button" class="btn btn-primary" id="shareBtn">Partager cette page</button>
+        <span id="shareMsg" style="display:block;margin-top:.5rem;font-size:.9rem"></span>
+      </p>
+      <script>
+        document.getElementById('shareBtn').addEventListener('click', function () {
+          var url = 'https://hypnotherapiesmalard-dotcom.github.io/hypnose-et-th-rapies/respirer-et-s-apaiser.html';
+          var msg = document.getElementById('shareMsg');
+          if (navigator.share) {
+            navigator.share({ title: "Respirer & s'apaiser", text: 'Respirations guidées et sons apaisants, gratuits :', url: url }).catch(function () {});
+          } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function () { msg.textContent = 'Lien copié, vous pouvez le coller dans un message.'; });
+          } else {
+            msg.textContent = url;
+          }
+        });
+      </script>
     </div>
   </section>
 
