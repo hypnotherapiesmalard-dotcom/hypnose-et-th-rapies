@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EMDR à distance — Hypnose & thérapies</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root{
+    --violet:#5e4b8b; --violet-d:#45366a; --vert:#4f7a5c; --creme:#faf6ee;
+    --texte:#2b2633; --gris:#6d6677; --bord:#e4ddd0; --blanc:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  body{font-family:Poppins,system-ui,sans-serif;color:var(--texte);background:var(--creme);min-height:100vh}
+  h1,h2{font-family:Lora,serif;font-weight:600}
+  button{font-family:inherit;cursor:pointer}
+  button:focus-visible{outline:3px solid var(--violet);outline-offset:2px}
+  .btn{border:none;border-radius:10px;padding:10px 16px;font-size:.95rem;font-weight:500;background:var(--violet);color:#fff}
+  .btn.light{background:var(--creme);color:var(--violet-d);border:1px solid var(--bord)}
+  .btn.big{font-size:1.1rem;padding:15px 30px;border-radius:14px}
+  .linkbtn{background:none;border:none;color:var(--gris);text-decoration:underline;font-size:.85rem;margin-top:14px}
+
+  /* ===== PRATICIEN ===== */
+  #praticien{max-width:1200px;margin:0 auto;padding:20px 16px 48px}
+  #praticien h1{font-size:1.5rem;color:var(--violet-d)}
+  .sub{color:var(--gris);font-size:.88rem;margin:4px 0 18px}
+  .card{background:var(--blanc);border:1px solid var(--bord);border-radius:16px;padding:18px;margin-bottom:16px}
+  .card h2{font-size:1.05rem;margin-bottom:12px;color:var(--violet-d)}
+  .centerCard{max-width:520px;margin:40px auto;text-align:center;padding:32px 24px}
+  .centerCard p{color:var(--gris);line-height:1.6;margin-bottom:18px}
+  .grid{display:grid;gap:16px;grid-template-columns:1fr}
+  @media (min-width:960px){ .grid{grid-template-columns:1.35fr 1fr;align-items:start} }
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .code{font-size:1.5rem;font-weight:600;letter-spacing:.15em;color:var(--violet)}
+  .link{flex:1;min-width:0;font-size:.85rem;padding:10px;border:1px solid var(--bord);border-radius:10px;background:var(--creme);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status{margin-top:12px;font-weight:500;font-size:.95rem}
+  .status.on{color:var(--vert)} .status.off{color:var(--gris)}
+
+  .videoBox{position:relative;aspect-ratio:16/10;background:#1e2a3a;border-radius:16px;overflow:hidden;margin-bottom:12px}
+  #patientVid{width:100%;height:100%;object-fit:cover;display:block}
+  #noVideo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa6b6;font-size:.95rem;text-align:center;padding:20px}
+  #myVid{position:absolute;right:12px;bottom:12px;width:24%;max-width:180px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.5);background:#000;transform:scaleX(-1)}
+  .vidCtrls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .vidCtrls .btn{font-size:.85rem;padding:8px 12px}
+
+  #preview{position:relative;height:60px;border-radius:12px;overflow:hidden;margin-bottom:12px;transition:background .3s}
+  #prevBall{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;margin:-11px 0 0 -11px}
+  #startBtn{width:100%;font-size:1.2rem;padding:16px;border-radius:14px}
+  #startBtn.running{background:var(--vert)}
+  .stats{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:.9rem;color:var(--gris);font-variant-numeric:tabular-nums}
+  .stats b{color:var(--texte)}
+  label.lab,.lab{display:block;font-size:.85rem;color:var(--gris);margin:14px 0 6px}
+  input[type=range]{width:100%;accent-color:var(--violet)}
+  .val{font-weight:600;color:var(--violet-d)}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:76px;padding:9px 6px;border-radius:10px;border:2px solid var(--bord);background:var(--blanc);font-size:.86rem;color:var(--texte)}
+  .seg button.sel{border-color:var(--violet);background:var(--violet);color:#fff;font-weight:600}
+  .swatch{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #999;vertical-align:-2px;margin-right:5px}
+  .hint{font-size:.8rem;color:var(--gris);margin-top:14px;line-height:1.5}
+  .check{display:flex;gap:8px;align-items:center;font-size:.88rem;margin-top:12px}
+
+  /* ===== PATIENT ===== */
+  #patient{position:fixed;inset:0;background:#1e2a3a;color:#c9d1dc;transition:background .4s}
+  #ball{position:absolute;top:50%;left:0;border-radius:50%;will-change:transform}
+  #pracVid{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(70vw,720px);max-height:75vh;aspect-ratio:4/3;object-fit:cover;border-radius:18px;background:#000;transition:opacity .6s}
+  #pracVid.off{opacity:0;pointer-events:none}
+  #ball{transition:opacity .6s}
+  #pStatus{position:absolute;bottom:14px;left:0;right:0;text-align:center;font-size:.85rem;color:#8f9bab;transition:opacity .6s}
+  #accueil{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:var(--creme);color:var(--texte);overflow:auto}
+  #accueil h1{color:var(--violet-d);font-size:1.6rem;margin-bottom:12px}
+  #accueil p{max-width:440px;line-height:1.6;margin-bottom:8px;color:var(--gris)}
+  #accueil .btn{margin-top:16px}
+  #selfVid{width:min(340px,80vw);aspect-ratio:4/3;object-fit:cover;border-radius:14px;background:#000;transform:scaleX(-1);margin:8px 0}
+  .err{color:#8a3b2e;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ========== VUE PRATICIEN ========== -->
+<div id="praticien" hidden>
+  <h1>EMDR à distance</h1>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.3)</span></p>
+
+  <div class="card centerCard" id="openCard">
+    <h2>Ouvrir la séance</h2>
+    <p>Ta caméra et ton micro vont s'activer pour que le patient t'entende (et te voie si tu le souhaites).</p>
+    <button class="btn big" id="openBtn">Ouvrir la séance</button>
+    <p class="err" id="openErr" hidden></p>
+    <div><button class="linkbtn" id="openNoCam">Continuer sans caméra ni micro</button></div>
+  </div>
+
+  <div class="grid" id="pGrid" hidden>
+    <section>
+      <div class="videoBox">
+        <video id="patientVid" autoplay playsinline></video>
+        <div id="noVideo">La vidéo du patient apparaîtra ici dès qu'il aura rejoint la séance.</div>
+        <video id="myVid" autoplay playsinline muted></video>
+      </div>
+      <p class="hint" style="margin:0 0 8px">En pause, le patient te voit en grand. Pendant une série, ton visage s'efface et la balle apparaît ; il continue d'entendre ta voix.</p>
+      <div class="vidCtrls">
+        <button class="btn light" id="micBtn">🎙 Couper mon micro</button>
+      </div>
+      <div class="card">
+        <div id="preview"><div id="prevBall"></div></div>
+        <button class="btn" id="startBtn">▶ Démarrer</button>
+        <div class="stats"><span>Allers-retours : <b id="count">0</b></span><span>Durée : <b id="timer">0:00</b></span><button class="btn light" id="resetBtn" style="padding:4px 10px;font-size:.8rem">Remettre à 0</button></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="card">
+        <h2>Séance</h2>
+        <div class="row">
+          <span>Code :</span><span class="code" id="codeTxt">——</span>
+          <button class="btn light" id="newCode">Nouveau code</button>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div class="link" id="linkTxt"></div>
+          <button class="btn" id="copyBtn">Copier le lien</button>
+        </div>
+        <p class="err" id="newCodeConfirm" hidden style="margin-top:10px;font-size:.88rem">Un patient est connecté : clique encore sur « Nouveau code » pour confirmer.</p>
+        <div class="status off" id="status">○ Connexion au service…</div>
+      </div>
+
+      <div class="card">
+        <h2>Réglages</h2>
+        <label class="lab" for="speed">Vitesse : <span class="val" id="speedVal">0,50</span> aller-retour / seconde</label>
+        <input type="range" id="speed" min="0.2" max="1.5" step="0.05" value="0.5">
+        <div class="seg" style="margin-top:8px">
+          <button data-speed="0.3">Lent</button><button data-speed="0.5">Normal</button><button data-speed="0.8">Rapide</button>
+        </div>
+
+        <span class="lab">Stimulation</span>
+        <div class="seg" id="modeSeg">
+          <button data-mode="both" class="sel">Visuel + son</button><button data-mode="visual">Visuel seul</button><button data-mode="sound">Son seul</button>
+        </div>
+
+        <span class="lab">Fond d'écran du patient</span>
+        <div class="seg" id="bgSeg">
+          <button data-bg="#1e2a3a" class="sel"><span class="swatch" style="background:#1e2a3a"></span>Bleu nuit</button>
+          <button data-bg="#2f3439"><span class="swatch" style="background:#2f3439"></span>Ardoise</button>
+          <button data-bg="#3b3546"><span class="swatch" style="background:#3b3546"></span>Prune</button>
+        </div>
+
+        <span class="lab">Couleur de la balle</span>
+        <div class="seg" id="colorSeg">
+          <button data-color="#e6dcc6" class="sel"><span class="swatch" style="background:#e6dcc6"></span>Sable</button>
+          <button data-color="#a9c1dc"><span class="swatch" style="background:#a9c1dc"></span>Bleu doux</button>
+          <button data-color="#c2b6dc"><span class="swatch" style="background:#c2b6dc"></span>Lavande</button>
+          <button data-color="#cfd3d8"><span class="swatch" style="background:#cfd3d8"></span>Perle</button>
+        </div>
+
+        <span class="lab">Taille de la balle</span>
+        <div class="seg" id="sizeSeg">
+          <button data-size="30">Petite</button><button data-size="50" class="sel">Moyenne</button><button data-size="80">Grande</button>
+        </div>
+
+        <span class="lab">Tonalité du son</span>
+        <div class="seg" id="toneSeg">
+          <button data-tone="330">Grave</button><button data-tone="440" class="sel">Moyen</button><button data-tone="660">Aigu</button>
+        </div>
+        <label class="lab" for="vol">Volume des bips chez le patient : <span class="val" id="volVal">50</span> %</label>
+        <input type="range" id="vol" min="0" max="1" step="0.05" value="0.5">
+
+        <label class="check"><input type="checkbox" id="localSound"> Entendre les bips aussi de mon côté</label>
+
+        <p class="hint">Raccourcis : <b>Espace</b> = démarrer / pause · <b>← →</b> = vitesse.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ========== VUE PATIENT ========== -->
+<div id="patient" hidden>
+  <div id="ball"></div>
+  <video id="pracVid" class="off" autoplay playsinline></video>
+  <div id="pStatus">Connexion…</div>
+  <div id="accueil">
+    <div id="step1">
+      <h1>Votre séance EMDR</h1>
+      <p>🎧 Mettez votre casque ou vos écouteurs.</p>
+      <p>Votre praticien va vous voir et vous entendre : autorisez la caméra et le micro quand votre navigateur vous le demande.</p>
+      <button class="btn big" id="camBtn">Activer caméra et micro</button>
+      <p class="err" id="camErr" hidden></p>
+    </div>
+    <div id="step2" hidden>
+      <h1>Vérification</h1>
+      <video id="selfVid" autoplay playsinline muted></video>
+      <p>Vérifiez que votre visage est bien visible et éclairé, puis placez-vous face à l'écran, à une distance confortable.</p>
+      <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
+    </div>
+    <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.3</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const PREFIX = 'hypnose-rosporden-emdr-';
+  // Serveurs de connexion : STUN (direct) + relais TURN Metered quand le direct échoue
+  const PEER_OPTS = { config: { iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'turn:global.relay.metered.ca:80', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turn:global.relay.metered.ca:443', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' }
+  ] } };
+  const params = new URLSearchParams(location.search);
+  const urlCode = (params.get('s') || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const ROLE = urlCode ? 'patient' : 'praticien';
+  const $ = id => document.getElementById(id);
+
+  // ---------- État partagé ----------
+  const S = { running:false, speed:0.5, mode:'both', color:'#e6dcc6', bg:'#1e2a3a', size:50, tone:440, volume:0.5 };
+  let phase = 0, halfIdx = 0, last = null;
+
+  // ---------- Audio (bips) ----------
+  let ac = null;
+  function initAudio(){
+    if (ac){ if (ac.state === 'suspended') ac.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) ac = new AC();
+  }
+  function beep(side){
+    if (!ac || S.mode === 'visual') return;
+    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.value = S.tone;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(Math.max(S.volume, 0.0002), t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g);
+    if (ac.createStereoPanner){ const p = ac.createStereoPanner(); p.pan.value = side; g.connect(p); p.connect(ac.destination); }
+    else g.connect(ac.destination);
+    o.start(t); o.stop(t + 0.25);
+  }
+
+  // ---------- Moteur d'animation ----------
+  let onFrame = function(){};
+  let playLocalSound = function(){ return true; };
+  function loop(ts){
+    if (last === null) last = ts;
+    const dt = Math.min((ts - last) / 1000, 0.1); last = ts;
+    if (S.running){
+      phase += S.speed * dt;
+      const h = Math.floor(phase * 2);
+      if (h !== halfIdx){ halfIdx = h; if (playLocalSound()) beep(h % 2 === 0 ? -1 : 1); }
+    }
+    onFrame(-Math.cos(2 * Math.PI * phase), dt);
+    requestAnimationFrame(loop);
+  }
+
+  function genCode(){
+    const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let c = '';
+    for (let i = 0; i < 6; i++) c += a[Math.floor(Math.random() * a.length)];
+    return c;
+  }
+  function playVid(v){ const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+
+  // =====================================================
+  //                     PRATICIEN
+  // =====================================================
+  if (ROLE === 'praticien'){
+    $('praticien').hidden = false;
+    let code, peer = null, conn = null, mediaCall = null, myStream = null, elapsed = 0, micOn = true, confirmNew = false;
+
+    try { code = localStorage.getItem('emdrCode'); } catch(e){}
+    if (!code){ code = genCode(); try { localStorage.setItem('emdrCode', code); } catch(e){} }
+
+    function patientLink(){ return location.origin + location.pathname + '?s=' + code; }
+    function setStatus(txt, on){ const el = $('status'); el.textContent = txt; el.className = 'status ' + (on ? 'on' : 'off'); }
+    function send(sync){ if (conn && conn.open) conn.send({ type:'state', s:S, phase:phase, sync:!!sync }); }
+
+    function showPatientVideo(stream){
+      $('patientVid').srcObject = stream; playVid($('patientVid'));
+      $('noVideo').hidden = true;
+    }
+    function clearPatientVideo(msg){
+      $('patientVid').srcObject = null;
+      $('noVideo').textContent = msg; $('noVideo').hidden = false;
+    }
+    function attachCall(call){
+      if (mediaCall && mediaCall !== call){ try { mediaCall.close(); } catch(e){} }
+      mediaCall = call;
+      call.on('stream', showPatientVideo);
+      call.on('close', () => { if (mediaCall === call){ mediaCall = null; } });
+    }
+
+    function startPeer(){
+      if (peer){ try { peer.destroy(); } catch(e){} }
+      conn = null; mediaCall = null;
+      clearPatientVideo("La vidéo du patient apparaîtra ici dès qu'il aura rejoint la séance.");
+      $('codeTxt').textContent = code;
+      $('linkTxt').textContent = patientLink();
+      setStatus('○ Connexion au service…', false);
+      peer = new Peer(PREFIX + code, PEER_OPTS);
+      peer.on('open', () => setStatus('○ En attente du patient…', false));
+      peer.on('connection', c => {
+        // On n'adopte une connexion que lorsqu'elle est réellement ouverte
+        function adopt(){
+          if (conn === c) return;
+          if (conn){ try { conn.close(); } catch(e){} }
+          conn = c;
+        }
+        c.on('open', () => { adopt(); setStatus('◐ Patient en cours de connexion…', true); send(true); });
+        c.on('data', d => {
+          if (!d) return;
+          adopt();
+          if (d.type === 'hello'){ setStatus('● Patient connecté', true); send(true); return; }
+          if (d.type !== 'ready') return;
+          setStatus(d.cam ? '● Patient connecté et prêt' : '● Patient connecté et prêt (sans caméra)', true);
+          send(true);
+          if (myStream) attachCall(peer.call(c.peer, myStream));
+          else if (d.cam) c.send({ type:'callme' });
+          else clearPatientVideo('Le patient a rejoint la séance sans caméra.');
+        });
+        c.on('close', () => {
+          if (conn === c){
+            conn = null;
+            setStatus('○ Patient déconnecté — en attente…', false);
+            clearPatientVideo('Le patient s\'est déconnecté. Il peut rouvrir le même lien.');
+          }
+        });
+      });
+      peer.on('call', call => { call.answer(myStream || undefined); attachCall(call); });
+      peer.on('disconnected', () => { setStatus('○ Reconnexion…', false); try { peer.reconnect(); } catch(e){} });
+      peer.on('error', e => {
+        if (e.type === 'unavailable-id') setStatus('⚠ Ce code est déjà ouvert dans un autre onglet. Ferme-le ou clique « Nouveau code ».', false);
+        else if (e.type === 'network' || e.type === 'server-error') setStatus('⚠ Problème réseau — vérifie ta connexion.', false);
+        else console.warn(e);
+      });
+    }
+
+    function openSession(withCam){
+      initAudio();
+      const go = () => { $('openCard').hidden = true; $('pGrid').hidden = false; startPeer(); };
+      if (!withCam || !navigator.mediaDevices){ $('myVid').hidden = true; $('micBtn').hidden = true; go(); return; }
+      navigator.mediaDevices.getUserMedia({ video:{ width:{ideal:640}, height:{ideal:480} }, audio:{ echoCancellation:true, noiseSuppression:true } })
+        .then(st => { myStream = st; $('myVid').srcObject = st; playVid($('myVid')); go(); })
+        .catch(() => {
+          $('openErr').textContent = "Caméra ou micro refusés. Autorise-les dans la barre d'adresse du navigateur puis réessaie, ou continue sans.";
+          $('openErr').hidden = false;
+        });
+    }
+    $('openBtn').onclick = () => openSession(true);
+    $('openNoCam').onclick = () => openSession(false);
+
+    $('micBtn').onclick = () => {
+      micOn = !micOn;
+      if (myStream) myStream.getAudioTracks().forEach(t => t.enabled = micOn);
+      $('micBtn').textContent = micOn ? '🎙 Couper mon micro' : '🔇 Micro coupé — réactiver';
+    };
+
+    $('newCode').onclick = () => {
+      if (conn && !confirmNew){ confirmNew = true; $('newCodeConfirm').hidden = false; setTimeout(() => { confirmNew = false; $('newCodeConfirm').hidden = true; }, 5000); return; }
+      confirmNew = false; $('newCodeConfirm').hidden = true;
+      code = genCode(); try { localStorage.setItem('emdrCode', code); } catch(e){}
+      startPeer();
+    };
+    $('copyBtn').onclick = () => {
+      const l = patientLink();
+      const ok = () => { $('copyBtn').textContent = 'Copié ✓'; setTimeout(() => $('copyBtn').textContent = 'Copier le lien', 1500); };
+      if (navigator.clipboard) navigator.clipboard.writeText(l).then(ok, () => window.prompt('Copie ce lien :', l));
+      else window.prompt('Copie ce lien :', l);
+    };
+
+    function toggle(){
+      S.running = !S.running;
+      $('startBtn').textContent = S.running ? '❚❚ Pause' : '▶ Démarrer';
+      $('startBtn').classList.toggle('running', S.running);
+      if (S.running && $('localSound').checked) initAudio();
+      send(true);
+    }
+    $('startBtn').onclick = toggle;
+    $('resetBtn').onclick = () => { phase = 0; halfIdx = 0; elapsed = 0; send(true); };
+
+    function setSpeed(v){
+      S.speed = Math.round(Math.min(1.5, Math.max(0.2, v)) * 20) / 20;
+      $('speed').value = S.speed;
+      $('speedVal').textContent = S.speed.toFixed(2).replace('.', ',');
+      send(false);
+    }
+    $('speed').oninput = e => setSpeed(parseFloat(e.target.value));
+    document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => setSpeed(parseFloat(b.dataset.speed)));
+
+    function seg(id, key, parse){
+      const btns = document.querySelectorAll('#' + id + ' button');
+      btns.forEach(b => b.onclick = () => {
+        btns.forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+        S[key] = parse(b.dataset[key]); applyLook(); send(false);
+      });
+    }
+    seg('modeSeg', 'mode', v => v);
+    seg('bgSeg', 'bg', v => v);
+    seg('colorSeg', 'color', v => v);
+    seg('sizeSeg', 'size', v => parseInt(v, 10));
+    seg('toneSeg', 'tone', v => parseInt(v, 10));
+
+    $('vol').oninput = e => { S.volume = parseFloat(e.target.value); $('volVal').textContent = Math.round(S.volume * 100); send(false); };
+    $('localSound').onchange = e => { if (e.target.checked) initAudio(); };
+    playLocalSound = () => $('localSound').checked;
+
+    document.addEventListener('keydown', e => {
+      if ($('pGrid').hidden) return;
+      if (e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+      if (e.code === 'Space'){ e.preventDefault(); toggle(); }
+      else if (e.code === 'ArrowRight'){ e.preventDefault(); setSpeed(S.speed + 0.05); }
+      else if (e.code === 'ArrowLeft'){ e.preventDefault(); setSpeed(S.speed - 0.05); }
+    });
+
+    const prev = $('preview'), pb = $('prevBall');
+    function applyLook(){ prev.style.background = S.bg; pb.style.background = S.color; pb.style.opacity = S.mode === 'sound' ? 0.25 : 1; }
+    applyLook();
+    onFrame = (x, dt) => {
+      const w = prev.clientWidth, m = 22;
+      pb.style.left = (m + (x + 1) / 2 * (w - 2 * m)) + 'px';
+      if (S.running) elapsed += dt;
+      $('count').textContent = Math.floor(phase);
+      const s = Math.floor(elapsed);
+      $('timer').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    };
+    requestAnimationFrame(loop);
+  }
+
+  // =====================================================
+  //                      PATIENT
+  // =====================================================
+  if (ROLE === 'patient'){
+    $('patient').hidden = false;
+    const ball = $('ball'), st = $('pStatus'), pracVid = $('pracVid');
+    let peer = null, conn = null, mediaCall = null, localStream = null, retryTimer = null, ready = false, hasPracVideo = false;
+
+    function status(t, fade){ st.textContent = t; st.style.opacity = fade ? 0 : 1; }
+    let connecting = false, openTimer = null, helloTimer = null, gotState = false;
+    function scheduleRetry(){ if (retryTimer) return; retryTimer = setTimeout(() => { retryTimer = null; connect(); }, 3000); }
+
+    function attachCall(call){
+      if (mediaCall && mediaCall !== call){ try { mediaCall.close(); } catch(e){} }
+      mediaCall = call;
+      call.on('stream', s => { pracVid.srcObject = s; hasPracVideo = s.getVideoTracks().length > 0; playVid(pracVid); applyLook(); });
+      call.on('close', () => { if (mediaCall === call){ mediaCall = null; hasPracVideo = false; applyLook(); } });
+      call.on('error', e => console.warn('appel', e));
+    }
+    function sendReady(){ if (conn && conn.open) conn.send({ type:'ready', cam:!!localStream }); }
+    function showState(){
+      if (!ready) return;
+      if (!conn || !gotState) status('En attente de votre praticien…', false);
+      else if (!S.running) status('En pause', false);
+      else status('', true);
+    }
+
+    function dropConn(c){
+      clearTimeout(openTimer); clearInterval(helloTimer);
+      connecting = false; gotState = false;
+      if (conn === c) conn = null;
+      try { c.close(); } catch(e){}
+    }
+
+    function connect(){
+      if (!peer || peer.destroyed) return;
+      if (peer.disconnected){ try { peer.reconnect(); } catch(e){} scheduleRetry(); return; }
+      if (connecting || (conn && conn.open)) return;   // une seule tentative à la fois
+      connecting = true; gotState = false;
+      const c = peer.connect(PREFIX + urlCode, { reliable:true, serialization:'json' });
+      conn = c;
+      openTimer = setTimeout(() => { if (conn === c && !c.open){ dropConn(c); scheduleRetry(); } }, 10000);
+      c.on('open', () => {
+        if (conn !== c) return;
+        clearTimeout(openTimer); connecting = false;
+        // on dit bonjour jusqu'à recevoir une réponse du praticien
+        const hello = () => { if (conn === c && c.open && !gotState) c.send({ type:'hello' }); };
+        hello(); helloTimer = setInterval(hello, 1500);
+        if (ready) sendReady();
+      });
+      c.on('data', d => {
+        if (conn !== c || !d) return;
+        if (d.type === 'callme'){ if (localStream) attachCall(peer.call(PREFIX + urlCode, localStream)); return; }
+        if (d.type !== 'state') return;
+        if (!gotState){ gotState = true; clearInterval(helloTimer); if (ready) sendReady(); }
+        Object.assign(S, d.s);
+        if (d.sync){ phase = d.phase; halfIdx = Math.floor(phase * 2); }
+        applyLook(); showState();
+      });
+      c.on('error', e => console.warn('données', e));
+      c.on('close', () => {
+        if (conn !== c) return;
+        dropConn(c); S.running = false; applyLook();
+        status('Connexion perdue — reconnexion…', false); scheduleRetry();
+      });
+    }
+
+    function startPeer(){
+      peer = new Peer(PEER_OPTS);
+      peer.on('open', connect);
+      peer.on('call', call => { call.answer(localStream || undefined); attachCall(call); });
+      peer.on('disconnected', () => { status('Reconnexion…', false); scheduleRetry(); });
+      peer.on('error', e => {
+        console.warn(e.type, e);
+        if (e.type === 'peer-unavailable'){
+          if (conn && !conn.open) dropConn(conn);
+          status('En attente de votre praticien…', false); scheduleRetry();
+        } else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error' || e.type === 'socket-closed'){
+          status('Problème de connexion — nouvelle tentative…', false); scheduleRetry();
+        }
+      });
+    }
+    startPeer();
+
+    function applyLook(){
+      $('patient').style.background = S.bg;
+      ball.style.width = ball.style.height = S.size + 'px';
+      ball.style.marginTop = (-S.size / 2) + 'px';
+      ball.style.background = S.color;
+      ball.style.display = S.mode === 'sound' ? 'none' : 'block';
+      const faceTime = hasPracVideo && !S.running;   // en pause : on voit le praticien
+      pracVid.classList.toggle('off', !faceTime);
+      ball.style.opacity = faceTime ? 0 : 1;
+    }
+    applyLook();
+
+    onFrame = x => {
+      const w = window.innerWidth, m = Math.max(20, w * 0.04);
+      ball.style.transform = 'translateX(' + (m + (x + 1) / 2 * (w - 2 * m - S.size)) + 'px)';
+    };
+
+    function keepAwake(){ try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {}); } catch(e){} }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ready) keepAwake(); });
+
+    $('camBtn').onclick = () => {
+      initAudio();
+      if (!navigator.mediaDevices){ $('camErr').textContent = "Ce navigateur ne permet pas la vidéo. Essayez avec Chrome, Safari ou Edge à jour."; $('camErr').hidden = false; return; }
+      navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480} }, audio:{ echoCancellation:true, noiseSuppression:true } })
+        .then(s => {
+          localStream = s;
+          $('selfVid').srcObject = s; playVid($('selfVid'));
+          $('step1').hidden = true; $('step2').hidden = false; $('noCamBtn').hidden = true;
+        })
+        .catch(() => {
+          $('camErr').textContent = "La caméra ou le micro ont été refusés. Autorisez-les dans la barre d'adresse du navigateur, puis réessayez.";
+          $('camErr').hidden = false;
+        });
+    };
+
+    function enter(){
+      ready = true;
+      initAudio();
+      beep(-1); setTimeout(() => beep(1), 350); // test gauche / droite
+      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+      keepAwake();
+      if (localStream) $('selfVid').srcObject = null;
+      $('accueil').hidden = true;
+      playVid(pracVid);
+      showState();
+      sendReady();
+    }
+    $('readyBtn').onclick = enter;
+    $('noCamBtn').onclick = enter;
+    $('patient').addEventListener('click', () => playVid(pracVid));
+
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+</body>
+</html>
