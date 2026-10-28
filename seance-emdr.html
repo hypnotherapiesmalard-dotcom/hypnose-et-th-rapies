@@ -83,7 +83,7 @@
 <!-- ========== VUE PRATICIEN ========== -->
 <div id="praticien" hidden>
   <h1>EMDR à distance</h1>
-  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.2)</span></p>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.3)</span></p>
 
   <div class="card centerCard" id="openCard">
     <h2>Ouvrir la séance</h2>
@@ -194,13 +194,22 @@
       <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
     </div>
     <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
-    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.2</p>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.3</p>
   </div>
 </div>
 
 <script>
 (function(){
   const PREFIX = 'hypnose-rosporden-emdr-';
+  // Serveurs de connexion : STUN (direct) + relais TURN Metered quand le direct échoue
+  const PEER_OPTS = { config: { iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'turn:global.relay.metered.ca:80', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turn:global.relay.metered.ca:443', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' },
+    { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: 'f613dd1ec03bf3ce4d75bedd', credential: 'qZxeS/Fmtw8NYihA' }
+  ] } };
   const params = new URLSearchParams(location.search);
   const urlCode = (params.get('s') || '').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const ROLE = urlCode ? 'patient' : 'praticien';
@@ -288,7 +297,7 @@
       $('codeTxt').textContent = code;
       $('linkTxt').textContent = patientLink();
       setStatus('○ Connexion au service…', false);
-      peer = new Peer(PREFIX + code);
+      peer = new Peer(PREFIX + code, PEER_OPTS);
       peer.on('open', () => setStatus('○ En attente du patient…', false));
       peer.on('connection', c => {
         // On n'adopte une connexion que lorsqu'elle est réellement ouverte
@@ -485,7 +494,7 @@
     }
 
     function startPeer(){
-      peer = new Peer();
+      peer = new Peer(PEER_OPTS);
       peer.on('open', connect);
       peer.on('call', call => { call.answer(localStream || undefined); attachCall(call); });
       peer.on('disconnected', () => { status('Reconnexion…', false); scheduleRetry(); });
