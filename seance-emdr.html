@@ -42,7 +42,7 @@
 
   .videoBox{position:relative;aspect-ratio:16/10;background:#1e2a3a;border-radius:16px;overflow:hidden;margin-bottom:12px}
   #patientVid{width:100%;height:100%;object-fit:cover;display:block}
-  #noVideo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa6b6;font-size:.95rem;text-align:center;padding:20px}
+  #noVideo{cursor:pointer;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa6b6;font-size:.95rem;text-align:center;padding:20px}
   #myVid{position:absolute;right:12px;bottom:12px;width:24%;max-width:180px;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.5);background:#000;transform:scaleX(-1)}
   .vidCtrls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
   .vidCtrls .btn{font-size:.85rem;padding:8px 12px}
@@ -83,7 +83,7 @@
 <!-- ========== VUE PRATICIEN ========== -->
 <div id="praticien" hidden>
   <h1>EMDR à distance</h1>
-  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.3)</span></p>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.4)</span></p>
 
   <div class="card centerCard" id="openCard">
     <h2>Ouvrir la séance</h2>
@@ -194,7 +194,7 @@
       <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
     </div>
     <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
-    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.3</p>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.4</p>
   </div>
 </div>
 
@@ -276,8 +276,15 @@
     function send(sync){ if (conn && conn.open) conn.send({ type:'state', s:S, phase:phase, sync:!!sync }); }
 
     function showPatientVideo(stream){
-      $('patientVid').srcObject = stream; playVid($('patientVid'));
+      const v = $('patientVid');
+      if (!stream.getVideoTracks().length){ clearPatientVideo("Le patient est connecté, mais sa caméra n'envoie pas d'image."); v.srcObject = stream; return; }
+      v.srcObject = stream;
+      const p = v.play();
       $('noVideo').hidden = true;
+      if (p && p.catch) p.catch(() => {
+        $('noVideo').textContent = 'Clique ici pour afficher la vidéo du patient.';
+        $('noVideo').hidden = false;
+      });
     }
     function clearPatientVideo(msg){
       $('patientVid').srcObject = null;
@@ -286,9 +293,11 @@
     function attachCall(call){
       if (mediaCall && mediaCall !== call){ try { mediaCall.close(); } catch(e){} }
       mediaCall = call;
-      call.on('stream', showPatientVideo);
+      call.on('stream', st => { if (mediaCall === call) showPatientVideo(st); });
       call.on('close', () => { if (mediaCall === call){ mediaCall = null; } });
+      call.on('error', e => { console.warn('appel', e); if (mediaCall === call) clearPatientVideo("La vidéo n'a pas pu s'établir. Demande au patient de recharger sa page."); });
     }
+    $('noVideo').onclick = () => { const v = $('patientVid'); if (v.srcObject){ v.play().then(() => $('noVideo').hidden = true).catch(() => {}); } };
 
     function startPeer(){
       if (peer){ try { peer.destroy(); } catch(e){} }
@@ -314,7 +323,9 @@
           if (d.type !== 'ready') return;
           setStatus(d.cam ? '● Patient connecté et prêt' : '● Patient connecté et prêt (sans caméra)', true);
           send(true);
-          if (myStream) attachCall(peer.call(c.peer, myStream));
+          const alreadyCalling = mediaCall && mediaCall.peer === c.peer;
+          if (alreadyCalling) return;            // pas de deuxième appel qui annulerait le premier
+          if (myStream){ clearPatientVideo('Connexion de la vidéo en cours…'); attachCall(peer.call(c.peer, myStream)); }
           else if (d.cam) c.send({ type:'callme' });
           else clearPatientVideo('Le patient a rejoint la séance sans caméra.');
         });
@@ -445,7 +456,8 @@
       call.on('close', () => { if (mediaCall === call){ mediaCall = null; hasPracVideo = false; applyLook(); } });
       call.on('error', e => console.warn('appel', e));
     }
-    function sendReady(){ if (conn && conn.open) conn.send({ type:'ready', cam:!!localStream }); }
+    let readySentOn = null;
+    function sendReady(){ if (conn && conn.open && readySentOn !== conn){ readySentOn = conn; conn.send({ type:'ready', cam:!!localStream }); } }
     function showState(){
       if (!ready) return;
       if (!conn || !gotState) status('En attente de votre praticien…', false);
