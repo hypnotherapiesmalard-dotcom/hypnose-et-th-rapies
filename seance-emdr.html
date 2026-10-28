@@ -83,7 +83,7 @@
 <!-- ========== VUE PRATICIEN ========== -->
 <div id="praticien" hidden>
   <h1>EMDR à distance</h1>
-  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho.</p>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.2)</span></p>
 
   <div class="card centerCard" id="openCard">
     <h2>Ouvrir la séance</h2>
@@ -194,6 +194,7 @@
       <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
     </div>
     <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.2</p>
   </div>
 </div>
 
@@ -290,12 +291,20 @@
       peer = new Peer(PREFIX + code);
       peer.on('open', () => setStatus('○ En attente du patient…', false));
       peer.on('connection', c => {
-        if (conn){ try { conn.close(); } catch(e){} }
-        conn = c;
-        c.on('open', () => { setStatus('● Patient connecté', true); send(true); });
+        // On n'adopte une connexion que lorsqu'elle est réellement ouverte
+        function adopt(){
+          if (conn === c) return;
+          if (conn){ try { conn.close(); } catch(e){} }
+          conn = c;
+        }
+        c.on('open', () => { adopt(); setStatus('◐ Patient en cours de connexion…', true); send(true); });
         c.on('data', d => {
-          if (!d || d.type !== 'ready') return;
+          if (!d) return;
+          adopt();
+          if (d.type === 'hello'){ setStatus('● Patient connecté', true); send(true); return; }
+          if (d.type !== 'ready') return;
           setStatus(d.cam ? '● Patient connecté et prêt' : '● Patient connecté et prêt (sans caméra)', true);
+          send(true);
           if (myStream) attachCall(peer.call(c.peer, myStream));
           else if (d.cam) c.send({ type:'callme' });
           else clearPatientVideo('Le patient a rejoint la séance sans caméra.');
@@ -417,6 +426,7 @@
     let peer = null, conn = null, mediaCall = null, localStream = null, retryTimer = null, ready = false, hasPracVideo = false;
 
     function status(t, fade){ st.textContent = t; st.style.opacity = fade ? 0 : 1; }
+    let connecting = false, openTimer = null, helloTimer = null, gotState = false;
     function scheduleRetry(){ if (retryTimer) return; retryTimer = setTimeout(() => { retryTimer = null; connect(); }, 3000); }
 
     function attachCall(call){
@@ -424,25 +434,54 @@
       mediaCall = call;
       call.on('stream', s => { pracVid.srcObject = s; hasPracVideo = s.getVideoTracks().length > 0; playVid(pracVid); applyLook(); });
       call.on('close', () => { if (mediaCall === call){ mediaCall = null; hasPracVideo = false; applyLook(); } });
+      call.on('error', e => console.warn('appel', e));
     }
     function sendReady(){ if (conn && conn.open) conn.send({ type:'ready', cam:!!localStream }); }
+    function showState(){
+      if (!ready) return;
+      if (!conn || !gotState) status('En attente de votre praticien…', false);
+      else if (!S.running) status('En pause', false);
+      else status('', true);
+    }
+
+    function dropConn(c){
+      clearTimeout(openTimer); clearInterval(helloTimer);
+      connecting = false; gotState = false;
+      if (conn === c) conn = null;
+      try { c.close(); } catch(e){}
+    }
 
     function connect(){
       if (!peer || peer.destroyed) return;
-      if (peer.disconnected){ try { peer.reconnect(); } catch(e){} return; }
-      const c = peer.connect(PREFIX + urlCode, { reliable:true });
+      if (peer.disconnected){ try { peer.reconnect(); } catch(e){} scheduleRetry(); return; }
+      if (connecting || (conn && conn.open)) return;   // une seule tentative à la fois
+      connecting = true; gotState = false;
+      const c = peer.connect(PREFIX + urlCode, { reliable:true, serialization:'json' });
       conn = c;
-      c.on('open', () => { status(ready ? 'Connecté à votre praticien' : 'Connecté', true); if (ready) sendReady(); });
+      openTimer = setTimeout(() => { if (conn === c && !c.open){ dropConn(c); scheduleRetry(); } }, 10000);
+      c.on('open', () => {
+        if (conn !== c) return;
+        clearTimeout(openTimer); connecting = false;
+        // on dit bonjour jusqu'à recevoir une réponse du praticien
+        const hello = () => { if (conn === c && c.open && !gotState) c.send({ type:'hello' }); };
+        hello(); helloTimer = setInterval(hello, 1500);
+        if (ready) sendReady();
+      });
       c.on('data', d => {
-        if (!d) return;
+        if (conn !== c || !d) return;
         if (d.type === 'callme'){ if (localStream) attachCall(peer.call(PREFIX + urlCode, localStream)); return; }
         if (d.type !== 'state') return;
+        if (!gotState){ gotState = true; clearInterval(helloTimer); if (ready) sendReady(); }
         Object.assign(S, d.s);
         if (d.sync){ phase = d.phase; halfIdx = Math.floor(phase * 2); }
-        applyLook();
-        if (ready) { if (!S.running) status('En pause', false); else status('', true); }
+        applyLook(); showState();
       });
-      c.on('close', () => { if (conn === c){ conn = null; S.running = false; applyLook(); status('Connexion perdue — reconnexion…', false); scheduleRetry(); } });
+      c.on('error', e => console.warn('données', e));
+      c.on('close', () => {
+        if (conn !== c) return;
+        dropConn(c); S.running = false; applyLook();
+        status('Connexion perdue — reconnexion…', false); scheduleRetry();
+      });
     }
 
     function startPeer(){
@@ -451,9 +490,13 @@
       peer.on('call', call => { call.answer(localStream || undefined); attachCall(call); });
       peer.on('disconnected', () => { status('Reconnexion…', false); scheduleRetry(); });
       peer.on('error', e => {
-        if (e.type === 'peer-unavailable') status('En attente de votre praticien…', false);
-        else status('Problème de connexion — nouvelle tentative…', false);
-        scheduleRetry();
+        console.warn(e.type, e);
+        if (e.type === 'peer-unavailable'){
+          if (conn && !conn.open) dropConn(conn);
+          status('En attente de votre praticien…', false); scheduleRetry();
+        } else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error' || e.type === 'socket-closed'){
+          status('Problème de connexion — nouvelle tentative…', false); scheduleRetry();
+        }
       });
     }
     startPeer();
@@ -502,7 +545,7 @@
       if (localStream) $('selfVid').srcObject = null;
       $('accueil').hidden = true;
       playVid(pracVid);
-      status(conn && conn.open ? 'Connecté à votre praticien' : 'En attente de votre praticien…', !!(conn && conn.open));
+      showState();
       sendReady();
     }
     $('readyBtn').onclick = enter;
