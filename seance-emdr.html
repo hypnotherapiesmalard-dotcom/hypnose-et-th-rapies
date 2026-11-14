@@ -83,7 +83,7 @@
 <!-- ========== VUE PRATICIEN ========== -->
 <div id="praticien" hidden>
   <h1>EMDR à distance</h1>
-  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.4)</span></p>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.5)</span></p>
 
   <div class="card centerCard" id="openCard">
     <h2>Ouvrir la séance</h2>
@@ -124,6 +124,24 @@
         </div>
         <p class="err" id="newCodeConfirm" hidden style="margin-top:10px;font-size:.88rem">Un patient est connecté : clique encore sur « Nouveau code » pour confirmer.</p>
         <div class="status off" id="status">○ Connexion au service…</div>
+      </div>
+
+      <div class="card">
+        <h2>Musique d'ambiance</h2>
+        <div class="seg" id="musicSeg">
+          <button data-music="off" class="sel">Aucune</button><button data-music="lumiere">Lumière douce</button><button data-music="ondes">Ondes</button>
+        </div>
+        <div id="beatBox" hidden>
+          <span class="lab">Fréquence des ondes</span>
+          <div class="seg" id="beatSeg">
+            <button data-beat="10" class="sel">10 Hz · alpha</button><button data-beat="6">6 Hz · thêta</button>
+          </div>
+          <p class="hint" style="margin:6px 0 0">Le passage de l'une à l'autre se fait en douceur, sur une dizaine de secondes. Casque obligatoire chez le patient.</p>
+        </div>
+        <label class="lab" for="musicVol">Volume de la musique chez le patient : <span class="val" id="musicVolVal">30</span> %</label>
+        <input type="range" id="musicVol" min="0" max="1" step="0.05" value="0.3">
+        <label class="check"><input type="checkbox" id="localMusic"> Entendre la musique aussi de mon côté</label>
+        <p class="hint">La musique est jouée directement sur l'appareil du patient, en pleine qualité ; ta voix arrive par-dessus. Elle continue pendant les séries et les pauses.</p>
       </div>
 
       <div class="card">
@@ -181,7 +199,7 @@
   <div id="pStatus">Connexion…</div>
   <div id="accueil">
     <div id="step1">
-      <h1>Votre séance EMDR</h1>
+      <h1>Votre séance</h1>
       <p>🎧 Mettez votre casque ou vos écouteurs.</p>
       <p>Votre praticien va vous voir et vous entendre : autorisez la caméra et le micro quand votre navigateur vous le demande.</p>
       <button class="btn big" id="camBtn">Activer caméra et micro</button>
@@ -194,7 +212,7 @@
       <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
     </div>
     <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
-    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.4</p>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.5</p>
   </div>
 </div>
 
@@ -216,7 +234,7 @@
   const $ = id => document.getElementById(id);
 
   // ---------- État partagé ----------
-  const S = { running:false, speed:0.5, mode:'both', color:'#e6dcc6', bg:'#1e2a3a', size:50, tone:440, volume:0.5 };
+  const S = { running:false, speed:0.5, mode:'both', color:'#e6dcc6', bg:'#1e2a3a', size:50, tone:440, volume:0.5, music:'off', musicVol:0.3, beat:10 };
   let phase = 0, halfIdx = 0, last = null;
 
   // ---------- Audio (bips) ----------
@@ -237,6 +255,90 @@
     if (ac.createStereoPanner){ const p = ac.createStereoPanner(); p.pan.value = side; g.connect(p); p.connect(ac.destination); }
     else g.connect(ac.destination);
     o.start(t); o.stop(t + 0.25);
+  }
+
+  // ---------- Musique d'ambiance (générée en direct, aucun fichier) ----------
+  function makeReverb(ctx, seconds, decay){
+    const len = Math.floor(ctx.sampleRate * seconds), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay); }
+    const cv = ctx.createConvolver(); cv.buffer = ir; return cv;
+  }
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  function fadeOutAndStop(ctx, master, srcs, timer, fade){
+    clearInterval(timer);
+    const t = ctx.currentTime;
+    master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0, t + fade);
+    srcs.forEach(n => { try { n.stop(t + fade + 0.1); } catch(e){} });
+    setTimeout(() => { try { master.disconnect(); } catch(e){} }, fade * 1000 + 300);
+  }
+  // « Lumière douce » : nappe en La majeur 7 qui respire, clochettes rares, longue réverbération
+  function startLumiere(ctx, out){
+    const t0 = ctx.currentTime, srcs = [];
+    const master = ctx.createGain(); master.gain.setValueAtTime(0, t0); master.gain.linearRampToValueAtTime(1, t0 + 6); master.connect(out);
+    const rev = makeReverb(ctx, 6, 2.2), wet = ctx.createGain(); wet.gain.value = 0.55; rev.connect(wet); wet.connect(master);
+    const dry = ctx.createGain(); dry.gain.value = 0.6; dry.connect(master);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100; lp.Q.value = 0.4; lp.connect(dry); lp.connect(rev);
+    [[45,.16],[52,.10],[57,.09],[61,.07],[64,.06],[68,.045]].forEach(([m, v], i) => {
+      [-6, 6].forEach(det => {
+        const o = ctx.createOscillator(); o.type = i < 2 ? 'sine' : 'triangle'; o.frequency.value = hz(m); o.detune.value = det;
+        const g = ctx.createGain(); g.gain.value = v * 0.5;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05 + 0.03 * i + Math.random() * 0.02;
+        const lg = ctx.createGain(); lg.gain.value = v * 0.35;
+        lfo.connect(lg); lg.connect(g.gain); o.connect(g); g.connect(lp); o.start(t0); lfo.start(t0); srcs.push(o, lfo);
+      });
+    });
+    const bellNotes = [69,71,73,76,78,81,83,85,88];
+    let next = t0 + 4;
+    function bell(t){
+      const f = hz(bellNotes[Math.floor(Math.random() * bellNotes.length)]), v = 0.03 + Math.random() * 0.02;
+      [[1, 1], [2.76, .15]].forEach(([r, a]) => {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * r;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * a, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 4.5 / r + 1);
+        o.connect(g);
+        if (ctx.createStereoPanner){ const p = ctx.createStereoPanner(); p.pan.value = Math.random() * 1.2 - 0.6; g.connect(p); p.connect(dry); p.connect(rev); }
+        else { g.connect(dry); g.connect(rev); }
+        o.start(t); o.stop(t + 6);
+      });
+    }
+    function schedule(){ while (next < ctx.currentTime + 12){ bell(next); next += 9 + Math.random() * 9; } }
+    schedule(); const timer = setInterval(schedule, 4000);
+    return { stop(fade){ fadeOutAndStop(ctx, master, srcs, timer, fade); }, setBeat(){} };
+  }
+  // « Ondes » : battement binaural (200 Hz à gauche, 200 + battement à droite) sur un souffle doux
+  function startOndes(ctx, out, beat){
+    const t0 = ctx.currentTime, carrier = 200;
+    const master = ctx.createGain(); master.gain.setValueAtTime(0, t0); master.gain.linearRampToValueAtTime(1, t0 + 8); master.connect(out);
+    const merger = ctx.createChannelMerger(2); merger.connect(master);
+    const oL = ctx.createOscillator(), oR = ctx.createOscillator();
+    oL.frequency.value = carrier; oR.frequency.value = carrier + beat;
+    const gL = ctx.createGain(), gR = ctx.createGain(); gL.gain.value = gR.gain.value = 0.22;
+    oL.connect(gL); gL.connect(merger, 0, 0); oR.connect(gR); gR.connect(merger, 0, 1);
+    const len = ctx.sampleRate * 4, buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++){ const d = buf.getChannelData(c); let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < len; i++){ const w = Math.random() * 2 - 1; b0 = .99765 * b0 + w * .099; b1 = .963 * b1 + w * .2965; b2 = .57 * b2 + w * 1.0526; d[i] = (b0 + b1 + b2 + w * .1848) * .08; } }
+    const n = ctx.createBufferSource(); n.buffer = buf; n.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+    const gN = ctx.createGain(); gN.gain.value = 0.35; n.connect(lp); lp.connect(gN); gN.connect(master);
+    oL.start(t0); oR.start(t0); n.start(t0);
+    return { stop(fade){ fadeOutAndStop(ctx, master, [oL, oR, n], null, fade); },
+             setBeat(b){ oR.frequency.setTargetAtTime(carrier + b, ctx.currentTime, 3); } };
+  }
+  // Lecteur : suit l'état S (music, musicVol, beat) ; enabled() dit si on doit jouer de ce côté
+  function makeMusicPlayer(enabled){
+    let cur = null, curName = 'off', bus = null;
+    return function sync(){
+      const want = (ac && enabled()) ? S.music : 'off';
+      if (ac && !bus){ bus = ac.createGain(); bus.gain.value = S.musicVol; bus.connect(ac.destination); }
+      if (bus) bus.gain.setTargetAtTime(S.musicVol, ac.currentTime, 0.4);
+      if (want !== curName){
+        if (cur){ cur.stop(4); cur = null; }
+        if (want === 'lumiere') cur = startLumiere(ac, bus);
+        else if (want === 'ondes') cur = startOndes(ac, bus, S.beat);
+        curName = want;
+      }
+      if (cur) cur.setBeat(S.beat);
+    };
   }
 
   // ---------- Moteur d'animation ----------
@@ -415,6 +517,22 @@
     $('localSound').onchange = e => { if (e.target.checked) initAudio(); };
     playLocalSound = () => $('localSound').checked;
 
+    // Musique d'ambiance
+    const syncMusic = makeMusicPlayer(() => $('localMusic').checked);
+    function musicSeg(id, key, parse){
+      const btns = document.querySelectorAll('#' + id + ' button');
+      btns.forEach(b => b.onclick = () => {
+        btns.forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+        S[key] = parse(b.dataset[key]);
+        $('beatBox').hidden = S.music !== 'ondes';
+        syncMusic(); send(false);
+      });
+    }
+    musicSeg('musicSeg', 'music', v => v);
+    musicSeg('beatSeg', 'beat', v => parseInt(v, 10));
+    $('musicVol').oninput = e => { S.musicVol = parseFloat(e.target.value); $('musicVolVal').textContent = Math.round(S.musicVol * 100); syncMusic(); send(false); };
+    $('localMusic').onchange = e => { if (e.target.checked) initAudio(); syncMusic(); };
+
     document.addEventListener('keydown', e => {
       if ($('pGrid').hidden) return;
       if (e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
@@ -531,7 +649,9 @@
       const faceTime = hasPracVideo && !S.running;   // en pause : on voit le praticien
       pracVid.classList.toggle('off', !faceTime);
       ball.style.opacity = faceTime ? 0 : 1;
+      syncMusic();
     }
+    const syncMusic = makeMusicPlayer(() => ready);   // la musique continue même si la connexion coupe un instant
     applyLook();
 
     onFrame = x => {
@@ -566,6 +686,7 @@
       if (localStream) $('selfVid').srcObject = null;
       $('accueil').hidden = true;
       playVid(pracVid);
+      syncMusic();
       showState();
       sendReady();
     }
