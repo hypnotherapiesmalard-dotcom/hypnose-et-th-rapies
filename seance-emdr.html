@@ -76,6 +76,7 @@
   #accueil .btn{margin-top:16px}
   #selfVid{width:min(340px,80vw);aspect-ratio:4/3;object-fit:cover;border-radius:14px;background:#000;transform:scaleX(-1);margin:8px 0}
   .err{color:#8a3b2e;font-weight:500}
+  #accueil p.btTip{font-size:.92rem;background:rgba(52,0,85,.06);padding:10px 12px;border-radius:10px}
 </style>
 </head>
 <body>
@@ -83,7 +84,7 @@
 <!-- ========== VUE PRATICIEN ========== -->
 <div id="praticien" hidden>
   <h1>EMDR à distance</h1>
-  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.5)</span></p>
+  <p class="sub">Panneau praticien — garde cette page ouverte pendant toute la séance. Utilise un casque pour éviter l'écho. <span style="opacity:.6">(v2.6)</span></p>
 
   <div class="card centerCard" id="openCard">
     <h2>Ouvrir la séance</h2>
@@ -200,7 +201,7 @@
   <div id="accueil">
     <div id="step1">
       <h1>Votre séance</h1>
-      <p>🎧 Mettez votre casque ou vos écouteurs.</p>
+      <p>🎧 Mettez votre casque ou vos écouteurs <b>avant</b> de continuer.</p>
       <p>Votre praticien va vous voir et vous entendre : autorisez la caméra et le micro quand votre navigateur vous le demande.</p>
       <button class="btn big" id="camBtn">Activer caméra et micro</button>
       <p class="err" id="camErr" hidden></p>
@@ -209,10 +210,11 @@
       <h1>Vérification</h1>
       <video id="selfVid" autoplay playsinline muted></video>
       <p>Vérifiez que votre visage est bien visible et éclairé, puis placez-vous face à l'écran, à une distance confortable.</p>
+      <p class="btTip">🎧 Écouteurs sans fil déconnectés ? Reconnectez-les maintenant. Sur iPhone : ouvrez le Centre de contrôle, touchez l'icône audio <span aria-hidden="true">((•))</span> du lecteur, puis choisissez vos écouteurs. Vous entendrez deux petits sons, à gauche puis à droite, en continuant.</p>
       <button class="btn big" id="readyBtn">Je suis prêt(e)</button>
     </div>
     <div><button class="linkbtn" id="noCamBtn">Continuer sans caméra</button></div>
-    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.5</p>
+    <p style="font-size:.7rem;opacity:.5;margin-top:16px">v2.6</p>
   </div>
 </div>
 
@@ -663,6 +665,8 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ready) keepAwake(); });
 
     $('camBtn').onclick = () => {
+      // iPhone : on annonce un « appel » pour que les écouteurs Bluetooth restent connectés quand le micro s'ouvre
+      try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch(e){}
       initAudio();
       if (!navigator.mediaDevices){ $('camErr').textContent = "Ce navigateur ne permet pas la vidéo. Essayez avec Chrome, Safari ou Edge à jour."; $('camErr').hidden = false; return; }
       navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480} }, audio:{ echoCancellation:true, noiseSuppression:true } })
