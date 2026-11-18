@@ -13,7 +13,7 @@
 :root{
   --bg:#F7F1E8;--surface:#FFFFFF;--ink:#1F1726;--muted:#5C5266;
   --primary:#340055;--primary-dark:#220038;--on-primary:#FFFFFF;
-  --sea:#B9C99A;--line:rgba(52,0,85,.14);--accent:#6E8F2E;--accent-dark:#4A5F1F;
+  --sea:#4F8DB3;--line:rgba(52,0,85,.14);--accent:#6E8F2E;--accent-dark:#4A5F1F;
   color-scheme:only light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -227,7 +227,7 @@ nav{position:static!important;background:transparent!important}
         <label class="chip"><input type="radio" name="dur" value="10"><span>10 min</span></label>
       </div>
     </fieldset>
-    <label class="check"><input type="checkbox" id="cue" checked> Signal sonore à chaque changement</label>
+    <label class="check"><input type="checkbox" id="cue" checked> Son de vague qui accompagne la respiration</label>
   </section>
 
   <!-- ÉCOUTER -->
@@ -758,6 +758,36 @@ function bell() {
   tone(528, 2.6, 0.07);
   tone(792, 2.2, 0.03);
 }
+// Vague sonore : un ressac qui monte à l'inspiration et se retire à l'expiration
+const surf = { src: null, lp: null, g: null, last: 0.12 };
+function surfStart() {
+  if (surf.src) return;
+  const c = ac();
+  surf.src = loop("pink");
+  surf.lp = filt("lowpass", 300, 0.6);
+  surf.g = c.createGain();
+  surf.g.gain.value = 0;
+  surf.src.connect(surf.lp).connect(surf.g).connect(master);
+}
+function surfSet(lvl) {
+  if (!surf.src) return;
+  const t = ctx.currentTime, move = Math.min(1, Math.abs(lvl - surf.last) * 60);
+  surf.last = lvl;
+  surf.g.gain.setTargetAtTime(0.04 + 0.5 * lvl * lvl + 0.08 * move, t, 0.12);
+  surf.lp.frequency.setTargetAtTime(260 + 1500 * lvl + 600 * move, t, 0.15);
+}
+function surfStop() {
+  if (!surf.src) return;
+  const t = ctx.currentTime, s = surf.src;
+  surf.g.gain.cancelScheduledValues(t);
+  surf.g.gain.setTargetAtTime(0, t, 0.6);
+  s.stop(t + 3);
+  surf.src = null;
+}
+$("#cue").addEventListener("change", (e) => {
+  if (!br.running) return;
+  if (e.target.checked) surfStart(); else surfStop();
+});
 const br = { running: false, start: 0, total: 300, raf: 0, seg: -1, lock: null, plan: [], cyc: 0, mode: "std", cycles: 5 };
 const pool = $("#pool"), phaseEl = $("#phase"), countEl = $("#count"), breathBtn = $("#breathBtn");
 const ease = (p) => 0.5 - 0.5 * Math.cos(Math.PI * p);
@@ -812,12 +842,13 @@ function breathTick(now) {
     k++;
   }
   const [label, d, a, b, f, detail] = br.plan[k];
-  pool.style.setProperty("--level", (a + (b - a) * ease(t / d)).toFixed(4));
+  const lvl = a + (b - a) * ease(t / d);
+  pool.style.setProperty("--level", lvl.toFixed(4));
+  surfSet(lvl);
   const id = n * 100 + k;
   if (id !== br.seg) {
     br.seg = id;
     phaseEl.textContent = label;
-    if ($("#cue").checked) tone(f, 1.1, 0.06);
   }
   const left = Math.ceil(d - t);
   countEl.textContent = br.mode === "41" ? (br.cycles ? `${detail} · cycle ${n + 1} sur ${br.cycles}` : `${detail} · cycle ${n + 1}`) : `${left} s, encore ${mmss(br.total - el)}`;
@@ -830,6 +861,7 @@ async function breathStart() {
   br.running = true;
   br.seg = -1;
   br.start = performance.now();
+  if ($("#cue").checked) surfStart();
   breathBtn.textContent = "Arrêter";
   pool.classList.add("running");
   try {
@@ -843,6 +875,7 @@ function breathStop(done) {
   var _a;
   cancelAnimationFrame(br.raf);
   br.running = false;
+  surfStop();
   sec.classList.remove("tap41");
   pool.classList.remove("running");
   pool.style.setProperty("--level", 0.12);
